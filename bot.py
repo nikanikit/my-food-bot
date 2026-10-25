@@ -57,7 +57,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         pass # Отключаем лишние логи
 
 def run_http_server():
-    port = int(os.environ.get('PORT', 8080))
+    port = int(os.environ.get('PORT', 10000))
     server = HTTPServer(('0.0.0.0', port), SimpleHTTPRequestHandler)
     server.serve_forever()
 
