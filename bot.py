@@ -3,7 +3,6 @@ import logging
 import sys
 import os
 from aiohttp import web
-import threading
 
 from aiogram import Bot, Dispatcher, html, F
 from aiogram.client.default import DefaultBotProperties
@@ -16,36 +15,36 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 BOT_TOKEN = "8992866321:AAGuEgiTJ3nQyrAwZ7XAhSOb3LVYGkWXa5o"
 ADMIN_ID = 829513672
 
-# --- МЕНЮ ---
+# --- МЕНЮ С ТОЧНЫМИ КАРТИНКАМИ ---
 DISHES = {
     "breakfast": [
-        {"id": "b1", "name": "Сырники со сгущенкой", "desc": "Классика, которая никогда не подводит.", "photo": "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?q=80&w=1000"},
-        {"id": "b2", "name": "Омлет с томатами и сыром", "desc": "Быстро, сытно и очень фотогенично.", "photo": "https://images.unsplash.com/photo-1510693206972-df098062cb71?q=80&w=1000"},
-        {"id": "b3", "name": "Авокадо-тост с яйцом пашот", "desc": "Для тех утр, когда хочется почувствовать себя в дорогом ресторане.", "photo": "https://images.unsplash.com/photo-1525351484163-7529414344d8?q=80&w=1000"},
-        {"id": "b4", "name": "Каша с карамелизированным бананом", "desc": "Овсянка, но не скучная.", "photo": "https://images.unsplash.com/photo-1517673132405-a56a62b18caf?q=80&w=1000"},
+        {"id": "b1", "name": "Сырники со сгущенкой", "desc": "Классика, которая никогда не подводит.", "photo": "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?q=80&w=1000&auto=format&fit=crop"},
+        {"id": "b2", "name": "Омлет с томатами и сыром", "desc": "Быстро, сытно и очень фотогенично.", "photo": "https://images.unsplash.com/photo-1510693206972-df098062cb71?q=80&w=1000&auto=format&fit=crop"},
+        {"id": "b3", "name": "Авокадо-тост с яйцом пашот", "desc": "Для тех утр, когда хочется почувствовать себя в дорогом ресторане.", "photo": "https://images.unsplash.com/photo-1525351484163-7529414344d8?q=80&w=1000&auto=format&fit=crop"},
+        {"id": "b4", "name": "Каша с карамелизированным бананом", "desc": "Овсянка, но не скучная.", "photo": "https://images.unsplash.com/photo-1517673132405-a56a62b18caf?q=80&w=1000&auto=format&fit=crop"},
     ],
     "lunch": [
-        {"id": "l1", "name": "Куриный суп с домашней лапшой", "desc": "Согревает душу.", "photo": "https://images.unsplash.com/photo-1547592180-85f173990554?q=80&w=1000"},
-        {"id": "l2", "name": "Паста Карбонара", "desc": "Секретное оружие.", "photo": "https://images.unsplash.com/photo-1612874742237-6526221588e3?q=80&w=1000"},
-        {"id": "l3", "name": "Плов с говядиной", "desc": "Настоящий мужской обед.", "photo": "https://images.unsplash.com/photo-1543826173-70651703c5a4?q=80&w=1000"},
-        {"id": "l4", "name": "Салат «Цезарь» с креветками", "desc": "Для тех, кто следит за фигурой.", "photo": "https://images.unsplash.com/photo-1550304943-4f24f54ddde9?q=80&w=1000"},
+        {"id": "l1", "name": "Куриный суп с домашней лапшой", "desc": "Согревает душу.", "photo": "https://images.unsplash.com/photo-1547592180-85f173990554?q=80&w=1000&auto=format&fit=crop"},
+        {"id": "l2", "name": "Паста Карбонара", "desc": "Секретное оружие.", "photo": "https://images.unsplash.com/photo-1612874742237-6526221588e3?q=80&w=1000&auto=format&fit=crop"},
+        {"id": "l3", "name": "Плов с говядиной", "desc": "Настоящий мужской обед.", "photo": "https://images.unsplash.com/photo-1543826173-70651703c5a4?q=80&w=1000&auto=format&fit=crop"},
+        {"id": "l4", "name": "Салат «Цезарь» с креветками", "desc": "Для тех, кто следит за фигурой.", "photo": "https://images.unsplash.com/photo-1550304943-4f24f54ddde9?q=80&w=1000&auto=format&fit=crop"},
     ],
     "dinner": [
-        {"id": "d1", "name": "Стейк с овощами гриль", "desc": "Беспроигрышный вариант.", "photo": "https://images.unsplash.com/photo-1600891964092-4316c288032e?q=80&w=1000"},
-        {"id": "d2", "name": "Запеченная курица с картофелем", "desc": "Уютный ужин.", "photo": "https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?q=80&w=1000"},
-        {"id": "d3", "name": "Дорадо в духовке с лимоном", "desc": "Невероятно вкусно и легко.", "photo": "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?q=80&w=1000"},
-        {"id": "d4", "name": "Бургеры домашние", "desc": "Если хочется вредной еды.", "photo": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=1000"},
+        {"id": "d1", "name": "Стейк с овощами гриль", "desc": "Беспроигрышный вариант.", "photo": "https://images.unsplash.com/photo-1600891964092-4316c288032e?q=80&w=1000&auto=format&fit=crop"},
+        {"id": "d2", "name": "Запеченная курица с картофелем", "desc": "Уютный ужин.", "photo": "https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?q=80&w=1000&auto=format&fit=crop"},
+        {"id": "d3", "name": "Дорадо в духовке с лимоном", "desc": "Невероятно вкусно и легко.", "photo": "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?q=80&w=1000&auto=format&fit=crop"},
+        {"id": "d4", "name": "Бургеры домашние", "desc": "Если хочется вредной еды.", "photo": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=1000&auto=format&fit=crop"},
     ],
     "dessert": [
-        {"id": "s1", "name": "Шоколадный фондан", "desc": "Жидкий центр.", "photo": "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?q=80&w=1000"},
-        {"id": "s2", "name": "Панна котта с ягодным соусом", "desc": "Легкий итальянский десерт.", "photo": "https://images.unsplash.com/photo-1488477181946-6428a0291777?q=80&w=1000"},
-        {"id": "s3", "name": "Штрудель с яблоком и корицей", "desc": "Пахнет праздником.", "photo": "https://images.unsplash.com/photo-1568571780765-9c9b8d8b0f1b?q=80&w=1000"},
+        {"id": "s1", "name": "Шоколадный фондан", "desc": "Жидкий центр.", "photo": "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?q=80&w=1000&auto=format&fit=crop"},
+        {"id": "s2", "name": "Панна котта с ягодным соусом", "desc": "Легкий итальянский десерт.", "photo": "https://images.unsplash.com/photo-1488477181946-6428a0291777?q=80&w=1000&auto=format&fit=crop"},
+        {"id": "s3", "name": "Штрудель с яблоком и корицей", "desc": "Пахнет праздником.", "photo": "https://images.unsplash.com/photo-1568571780765-9c9b8d8b0f1b?q=80&w=1000&auto=format&fit=crop"},
     ]
 }
 
 dp = Dispatcher()
 
-# --- ВЕБ-СЕРВЕР ДЛЯ RENDER (обязательно для Web Service) ---
+# --- ВЕБ-СЕРВЕР ДЛЯ RENDER ---
 async def handle(request):
     return web.Response(text="Bot is running!")
 
@@ -59,7 +58,7 @@ async def start_web_server():
     await site.start()
     logging.info(f"Веб-сервер запущен на порту {port}")
 
-# --- КЛАВИАТУРЫ И ХЕНДЛЕРЫ ---
+# --- КЛАВИАТУРЫ ---
 def get_main_menu():
     builder = InlineKeyboardBuilder()
     builder.button(text="🌅 Завтрак", callback_data="cat_breakfast")
@@ -77,6 +76,7 @@ def get_dishes_menu(category):
     builder.adjust(1)
     return builder.as_markup()
 
+# --- ХЕНДЛЕРЫ ---
 @dp.message(CommandStart())
 async def command_start_handler(message: Message) -> None:
     text = f"Привет, {html.bold('сладкий')}! 👋\n\nВыбери, чего бы тебе хотелось сегодня, а я передам заказ на кухню. 😉"
@@ -118,15 +118,8 @@ async def back_to_main(callback: CallbackQuery):
     await callback.message.answer(text="Чего пожелает мой Хозяин сегодня?", reply_markup=get_main_menu())
     await callback.answer()
 
-# --- ГЛАВНЫЙ ЗАПУСК ---
+# --- ЗАПУСК ---
 async def main() -> None:
-    # Запускаем веб-сервер параллельно с ботом
     asyncio.create_task(start_web_server())
-    
-    # Запускаем бота
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-    await dp.start_polling(bot)
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, stream=sys.stdout)
-    asyncio.run(main())
+    await
