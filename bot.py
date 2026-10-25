@@ -1,6 +1,9 @@
 import asyncio
 import logging
 import sys
+import os
+from threading import Thread
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from aiogram import Bot, Dispatcher, html, F
 from aiogram.client.default import DefaultBotProperties
@@ -11,36 +14,52 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 # --- НАСТРОЙКИ ---
 BOT_TOKEN = "8992866321:AAGuEgiTJ3nQyrAwZ7XAhSOb3LVYGkWXa5o"
-ADMIN_ID = 829513672  # Ваш ID вставлен сюда
+ADMIN_ID = 829513672
 
 # --- МЕНЮ (Классическое ресторанное) ---
 DISHES = {
     "breakfast": [
-        {"id": "b1", "name": "Сырники со сгущенкой", "desc": "Классика, которая никогда не подводит. Включает режим «заботливая»", "photo": "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?q=80&w=1000"},
+        {"id": "b1", "name": "Сырники со сгущенкой", "desc": "Классика, которая никогда не подводит.", "photo": "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?q=80&w=1000"},
         {"id": "b2", "name": "Омлет с томатами и сыром", "desc": "Быстро, сытно и очень фотогенично.", "photo": "https://images.unsplash.com/photo-1510693206972-df098062cb71?q=80&w=1000"},
         {"id": "b3", "name": "Авокадо-тост с яйцом пашот", "desc": "Для тех утр, когда хочется почувствовать себя в дорогом ресторане.", "photo": "https://images.unsplash.com/photo-1525351484163-7529414344d8?q=80&w=1000"},
-        {"id": "b4", "name": "Каша с карамелизированным бананом", "desc": "Овсянка, но не скучная, а как в лучших кофейнях.", "photo": "https://images.unsplash.com/photo-1517673132405-a56a62b18caf?q=80&w=1000"},
+        {"id": "b4", "name": "Каша с карамелизированным бананом", "desc": "Овсянка, но не скучная.", "photo": "https://images.unsplash.com/photo-1517673132405-a56a62b18caf?q=80&w=1000"},
     ],
     "lunch": [
-        {"id": "l1", "name": "Куриный суп с домашней лапшой", "desc": "Согревает душу и лечит любые печали.", "photo": "https://images.unsplash.com/photo-1547592180-85f173990554?q=80&w=1000"},
-        {"id": "l2", "name": "Паста Карбонара", "desc": "Секретное оружие. Если выбрал это — ты знаешь толк в жизни.", "photo": "https://images.unsplash.com/photo-1612874742237-6526221588e3?q=80&w=1000"},
-        {"id": "l3", "name": "Плов с говядиной", "desc": "Настоящий мужской обед. Много мяса, много вкуса.", "photo": "https://images.unsplash.com/photo-1543826173-70651703c5a4?q=80&w=1000"},
-        {"id": "l4", "name": "Салат «Цезарь» с креветками", "desc": "Для тех, кто следит за фигурой, но не готов отказываться от вкусного.", "photo": "https://images.unsplash.com/photo-1550304943-4f24f54ddde9?q=80&w=1000"},
+        {"id": "l1", "name": "Куриный суп с домашней лапшой", "desc": "Согревает душу.", "photo": "https://images.unsplash.com/photo-1547592180-85f173990554?q=80&w=1000"},
+        {"id": "l2", "name": "Паста Карбонара", "desc": "Секретное оружие.", "photo": "https://images.unsplash.com/photo-1612874742237-6526221588e3?q=80&w=1000"},
+        {"id": "l3", "name": "Плов с говядиной", "desc": "Настоящий мужской обед.", "photo": "https://images.unsplash.com/photo-1543826173-70651703c5a4?q=80&w=1000"},
+        {"id": "l4", "name": "Салат «Цезарь» с креветками", "desc": "Для тех, кто следит за фигурой.", "photo": "https://images.unsplash.com/photo-1550304943-4f24f54ddde9?q=80&w=1000"},
     ],
     "dinner": [
-        {"id": "d1", "name": "Стейк с овощами гриль", "desc": "Беспроигрышный вариант для вечера.", "photo": "https://images.unsplash.com/photo-1600891964092-4316c288032e?q=80&w=1000"},
-        {"id": "d2", "name": "Запеченная курица с картофелем", "desc": "Уютный ужин, после которого хочется обнять и уснуть.", "photo": "https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?q=80&w=1000"},
-        {"id": "d3", "name": "Дорадо в духовке с лимоном", "desc": "Немного необычно, но невероятно вкусно и легко.", "photo": "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?q=80&w=1000"},
-        {"id": "d4", "name": "Бургеры домашние", "desc": "Если хочется вредной, но безумно вкусной еды.", "photo": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=1000"},
+        {"id": "d1", "name": "Стейк с овощами гриль", "desc": "Беспроигрышный вариант.", "photo": "https://images.unsplash.com/photo-1600891964092-4316c288032e?q=80&w=1000"},
+        {"id": "d2", "name": "Запеченная курица с картофелем", "desc": "Уютный ужин.", "photo": "https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?q=80&w=1000"},
+        {"id": "d3", "name": "Дорадо в духовке с лимоном", "desc": "Невероятно вкусно и легко.", "photo": "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?q=80&w=1000"},
+        {"id": "d4", "name": "Бургеры домашние", "desc": "Если хочется вредной еды.", "photo": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=1000"},
     ],
     "dessert": [
-        {"id": "s1", "name": "Шоколадный фондан", "desc": "Жидкий центр. Нужны ли комментарии?", "photo": "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?q=80&w=1000"},
+        {"id": "s1", "name": "Шоколадный фондан", "desc": "Жидкий центр.", "photo": "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?q=80&w=1000"},
         {"id": "s2", "name": "Панна котта с ягодным соусом", "desc": "Легкий итальянский десерт.", "photo": "https://images.unsplash.com/photo-1488477181946-6428a0291777?q=80&w=1000"},
         {"id": "s3", "name": "Штрудель с яблоком и корицей", "desc": "Пахнет праздником.", "photo": "https://images.unsplash.com/photo-1568571780765-9c9b8d8b0f1b?q=80&w=1000"},
     ]
 }
 
 dp = Dispatcher()
+
+# --- ЗАГЛУШКА ДЛЯ RENDER ---
+class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/plain')
+        self.end_headers()
+        self.wfile.write(b'Bot is running!')
+    
+    def log_message(self, format, *args):
+        pass # Отключаем лишние логи
+
+def run_http_server():
+    port = int(os.environ.get('PORT', 8080))
+    server = HTTPServer(('0.0.0.0', port), SimpleHTTPRequestHandler)
+    server.serve_forever()
 
 # --- КЛАВИАТУРЫ ---
 def get_main_menu():
@@ -79,7 +98,7 @@ async def show_category(callback: CallbackQuery):
         "dinner": "🌙 Выбирай ужин:",
         "dessert": "🍰 Десерт для сладкого:"
     }
-    await callback.message.edit_text(text=titles[category], reply_markup=get_dishes_menu(category))
+    await callback.message.answer(text=titles[category], reply_markup=get_dishes_menu(category))
     await callback.answer()
 
 @dp.callback_query(F.data.startswith("dish_"))
@@ -93,9 +112,9 @@ async def dish_selected(callback: CallbackQuery):
                 break
     
     if selected_dish:
-        await callback.message.edit_text(
-            text=f"Отличный выбор! 🥂\n\n{selected_dish['name']}\n\nЯ уже передал заказ. Жди!",
-            reply_markup=None
+        await callback.message.answer_photo(
+            photo=selected_dish['photo'],
+            caption=f"Отличный выбор! 🥂\n\n{html.bold(selected_dish['name'])}\n\nЯ уже передал заказ. Жди!"
         )
         await callback.answer("Заказ принят!")
         
@@ -108,22 +127,18 @@ async def dish_selected(callback: CallbackQuery):
         )
         try:
             await callback.bot.send_message(chat_id=ADMIN_ID, text=admin_text)
+            await callback.bot.send_photo(chat_id=ADMIN_ID, photo=selected_dish['photo'], caption=f"Заказано: {selected_dish['name']}")
         except Exception as e:
-            print(f"Ошибка отправки админу: {e} (Проверьте ADMIN_ID)")
+            print(f"Ошибка отправки админу: {e}")
 
 @dp.callback_query(F.data == "back_to_main")
 async def back_to_main(callback: CallbackQuery):
-    await callback.message.edit_text(
+    await callback.message.answer(
         text="Чего пожелает мой Хозяин сегодня?",
         reply_markup=get_main_menu()
     )
     await callback.answer()
 
-# --- ЗАПУСК ---
 async def main() -> None:
-    bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-    await dp.start_polling(bot)
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, stream=sys.stdout)
-    asyncio.run(main())
+    # Запускаем веб-сервер в фоне
+    Thread(target=run_http_server, daemon=True).start()
