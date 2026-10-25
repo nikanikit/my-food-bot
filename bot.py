@@ -2,8 +2,8 @@ import asyncio
 import logging
 import sys
 import os
-from threading import Thread
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from aiohttp import web
+import threading
 
 from aiogram import Bot, Dispatcher, html, F
 from aiogram.client.default import DefaultBotProperties
@@ -16,7 +16,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 BOT_TOKEN = "8992866321:AAGuEgiTJ3nQyrAwZ7XAhSOb3LVYGkWXa5o"
 ADMIN_ID = 829513672
 
-# --- МЕНЮ (Классическое ресторанное) ---
+# --- МЕНЮ ---
 DISHES = {
     "breakfast": [
         {"id": "b1", "name": "Сырники со сгущенкой", "desc": "Классика, которая никогда не подводит.", "photo": "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?q=80&w=1000"},
@@ -45,23 +45,21 @@ DISHES = {
 
 dp = Dispatcher()
 
-# --- ЗАГЛУШКА ДЛЯ RENDER ---
-class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'text/plain')
-        self.end_headers()
-        self.wfile.write(b'Bot is running!')
-    
-    def log_message(self, format, *args):
-        pass # Отключаем лишние логи
+# --- ВЕБ-СЕРВЕР ДЛЯ RENDER (обязательно для Web Service) ---
+async def handle(request):
+    return web.Response(text="Bot is running!")
 
-def run_http_server():
+async def start_web_server():
+    app = web.Application()
+    app.router.add_get('/', handle)
+    runner = web.AppRunner(app)
+    await runner.setup()
     port = int(os.environ.get('PORT', 10000))
-    server = HTTPServer(('0.0.0.0', port), SimpleHTTPRequestHandler)
-    server.serve_forever()
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    await site.start()
+    logging.info(f"Веб-сервер запущен на порту {port}")
 
-# --- КЛАВИАТУРЫ ---
+# --- КЛАВИАТУРЫ И ХЕНДЛЕРЫ ---
 def get_main_menu():
     builder = InlineKeyboardBuilder()
     builder.button(text="🌅 Завтрак", callback_data="cat_breakfast")
@@ -79,25 +77,15 @@ def get_dishes_menu(category):
     builder.adjust(1)
     return builder.as_markup()
 
-# --- ХЕНДЛЕРЫ ---
 @dp.message(CommandStart())
 async def command_start_handler(message: Message) -> None:
-    text = (
-        f"Привет, {html.bold('сладкий')}! 👋\n\n"
-        "Добро пожаловать в твое персональное меню.\n"
-        "Выбери, чего бы тебе хотелось сегодня, а я передам заказ на кухню. 😉"
-    )
+    text = f"Привет, {html.bold('сладкий')}! 👋\n\nВыбери, чего бы тебе хотелось сегодня, а я передам заказ на кухню. 😉"
     await message.answer(text, reply_markup=get_main_menu())
 
 @dp.callback_query(F.data.startswith("cat_"))
 async def show_category(callback: CallbackQuery):
     category = callback.data.split("_")[1]
-    titles = {
-        "breakfast": "🌅 Выбирай завтрак, родной:",
-        "lunch": "☀️ Что на обед, хозяин?",
-        "dinner": "🌙 Выбирай ужин:",
-        "dessert": "🍰 Десерт для сладкого:"
-    }
+    titles = {"breakfast": "🌅 Выбирай завтрак, родной:", "lunch": "☀️ Что на обед, хозяин?", "dinner": "🌙 Выбирай ужин:", "dessert": "🍰 Десерт для сладкого:"}
     await callback.message.answer(text=titles[category], reply_markup=get_dishes_menu(category))
     await callback.answer()
 
@@ -118,27 +106,27 @@ async def dish_selected(callback: CallbackQuery):
         )
         await callback.answer("Заказ принят!")
         
-        admin_text = (
-            f"🔔 {html.bold('Новый заказ!')}\n\n"
-            f"Твой любимый выбрал:\n"
-            f"🍽 {html.bold(selected_dish['name'])}\n"
-            f"📝 {selected_dish['desc']}\n\n"
-            f"Время готовить магию! ✨"
-        )
+        admin_text = f"🔔 {html.bold('Новый заказ!')}\n\nТвой любимый выбрал:\n🍽 {html.bold(selected_dish['name'])}\n📝 {selected_dish['desc']}\n\nВремя готовить магию! ✨"
         try:
             await callback.bot.send_message(chat_id=ADMIN_ID, text=admin_text)
             await callback.bot.send_photo(chat_id=ADMIN_ID, photo=selected_dish['photo'], caption=f"Заказано: {selected_dish['name']}")
         except Exception as e:
-            print(f"Ошибка отправки админу: {e}")
+            logging.error(f"Ошибка отправки админу: {e}")
 
 @dp.callback_query(F.data == "back_to_main")
 async def back_to_main(callback: CallbackQuery):
-    await callback.message.answer(
-        text="Чего пожелает мой Хозяин сегодня?",
-        reply_markup=get_main_menu()
-    )
+    await callback.message.answer(text="Чего пожелает мой Хозяин сегодня?", reply_markup=get_main_menu())
     await callback.answer()
 
+# --- ГЛАВНЫЙ ЗАПУСК ---
 async def main() -> None:
-    # Запускаем веб-сервер в фоне
-    Thread(target=run_http_server, daemon=True).start()
+    # Запускаем веб-сервер параллельно с ботом
+    asyncio.create_task(start_web_server())
+    
+    # Запускаем бота
+    bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+    asyncio.run(main())
