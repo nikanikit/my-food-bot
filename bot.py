@@ -11,7 +11,7 @@ from aiogram.filters import CommandStart
 from aiogram.types import Message, CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-BOT_TOKEN = "8992866321:AAGuEgiTJ3nQyrAwZ7XAhSOb3LVYGkWXa5o"
+BOT_TOKEN = "8992866321:AAGm-BHuABHCzWxISt39zBwbVfqDeAIOBpY"
 ADMIN_ID = 829513672
 
 DISHES = {
