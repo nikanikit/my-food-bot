@@ -11,11 +11,9 @@ from aiogram.filters import CommandStart
 from aiogram.types import Message, CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-# --- НАСТРОЙКИ ---
 BOT_TOKEN = "8992866321:AAGuEgiTJ3nQyrAwZ7XAhSOb3LVYGkWXa5o"
 ADMIN_ID = 829513672
 
-# --- МЕНЮ С ТОЧНЫМИ КАРТИНКАМИ ---
 DISHES = {
     "breakfast": [
         {"id": "b1", "name": "Сырники со сгущенкой", "desc": "Классика, которая никогда не подводит.", "photo": "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?q=80&w=1000&auto=format&fit=crop"},
@@ -44,7 +42,6 @@ DISHES = {
 
 dp = Dispatcher()
 
-# --- ВЕБ-СЕРВЕР ДЛЯ RENDER ---
 async def handle(request):
     return web.Response(text="Bot is running!")
 
@@ -56,9 +53,7 @@ async def start_web_server():
     port = int(os.environ.get('PORT', 10000))
     site = web.TCPSite(runner, '0.0.0.0', port)
     await site.start()
-    logging.info(f"Веб-сервер запущен на порту {port}")
 
-# --- КЛАВИАТУРЫ ---
 def get_main_menu():
     builder = InlineKeyboardBuilder()
     builder.button(text="🌅 Завтрак", callback_data="cat_breakfast")
@@ -76,7 +71,6 @@ def get_dishes_menu(category):
     builder.adjust(1)
     return builder.as_markup()
 
-# --- ХЕНДЛЕРЫ ---
 @dp.message(CommandStart())
 async def command_start_handler(message: Message) -> None:
     text = f"Привет, {html.bold('сладкий')}! 👋\n\nВыбери, чего бы тебе хотелось сегодня, а я передам заказ на кухню. 😉"
@@ -118,8 +112,11 @@ async def back_to_main(callback: CallbackQuery):
     await callback.message.answer(text="Чего пожелает мой Хозяин сегодня?", reply_markup=get_main_menu())
     await callback.answer()
 
-# --- ЗАПУСК ---
 async def main() -> None:
     asyncio.create_task(start_web_server())
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-    await
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+    asyncio.run(main())
