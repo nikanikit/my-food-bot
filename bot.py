@@ -106,17 +106,22 @@ async def command_start_handler(message: Message) -> None:
 
 @dp.callback_query(F.data.startswith("cat_"))
 async def show_category(callback: CallbackQuery):
-    category = callback.data.split("_")[1]
-    titles = {
-        "breakfast": "🌅 Выбирай завтрак, родной:",
-        "lunch": "☀️ Что на обед, хозяин?",
-        "dinner": "🌙 Выбирай ужин:",
-        "salads": "🥗 Выбирай салатик:",
-        "drinks": "🍹 Что будешь пить?",
-        "dessert": "🍰 Десерт для сладкого:"
-    }
-    await callback.message.answer(text=titles[category], reply_markup=get_dishes_menu(category))
-    await callback.answer()
+    try:
+        category = callback.data.split("_")[1]
+        titles = {
+            "breakfast": "🌅 Выбирай завтрак, родной:",
+            "lunch": "☀️ Что на обед, хозяин?",
+            "dinner": "🌙 Выбирай ужин:",
+            "salads": "🥗 Выбирай салатик:",
+            "drinks": "🍹 Что будешь пить?",
+            "dessert": "🍰 Десерт для сладкого:"
+        }
+        # Отправляем новое сообщение
+        await callback.message.answer(text=titles[category], reply_markup=get_dishes_menu(category))
+        await callback.answer()
+    except Exception as e:
+        logging.error(f"Ошибка при выборе категории: {e}")
+        await callback.answer("Произошла ошибка, попробуйте еще раз.")
 
 @dp.callback_query(F.data.startswith("dish_"))
 async def dish_selected(callback: CallbackQuery):
